@@ -1475,6 +1475,19 @@ stable; lifecycle assertions such as completion and modification are
 mutable and can become stale. Participant acting on an old copy can make
 incorrect decisions, as discussed later under Stale Context.
 
+A Task's actual state is therefore different from what a participant
+knows of it:
+
+- A participant knows a Task's state only as of the time the source
+  of that state observed it (see "Context Freshness and Lifetime").
+- When a participant cannot confirm a state that is not final, for
+  example because the downstream participant that reported it has
+  become unreachable, it treats the state as unknown instead of
+  passing on the last state it received as current.
+- The unknown state describes the participant's knowledge, not the
+  Task's progress. Unlike completed, failed, or cancelled, it is not
+  an outcome, and the Task itself may still be in progress.
+
 A Task has one progression state at a time; modifiers may coexist with
 it. Thus a Task may be in-progress and modified without changing its
 progression state.
@@ -1879,6 +1892,11 @@ root cause uncertain.
 ### Failure Visibility and Bounded Accountability
 
 TBD
+
+When a downstream participant becomes unreachable, the source time on
+relayed lifecycle assertions (see "Context Freshness and Lifetime")
+lets upstream participants see how long a reported state has gone
+unconfirmed instead of treating it as current.
 
 ## The Propagation Model
 
@@ -2387,6 +2405,25 @@ is mutable lifecycle state.
 
 Propagation mechanisms need appropriate freshness and update behavior
 for each class.
+
+A lifecycle assertion can reach a participant through intermediaries,
+so the time its source observed the state can differ from the time the
+assertion was forwarded or received. In the D1--D2--D3 chain (see
+"Maintenance Responsibilities Within the Established Scope"), if
+Agent B becomes unreachable, Agent A keeps relaying its last copy of
+"t_13 in-progress" upstream, and the FNE cannot tell it from a
+current one. Therefore:
+
+- A lifecycle assertion carries the time its source observed the
+  state (its source time).
+- A participant that relays or translates the assertion, such as a
+  bridging participant (see "The Propagation Model"), keeps the source
+  time unchanged, including when it does not disclose the source (see
+  "Hidden Delegation and Partial Visibility").
+- A participant that receives the assertion measures its age from
+  the source time rather than from when it received it.
+- How freshness is evaluated, and how the source time is carried
+  across intermediaries, are left to the dialog-management protocol.
 
 ## Propagation Revocation
 
